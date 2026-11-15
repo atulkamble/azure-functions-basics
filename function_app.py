@@ -43,7 +43,7 @@ def home(req: func.HttpRequest) -> func.HttpResponse:
     pre { overflow:auto; background:#0e2238; color:#e7f2ff; padding:16px; border-radius:10px; font-size:.86rem; }
     .link { display:inline-block; margin:5px 9px 0 0; color:var(--blue); font-weight:650; text-decoration:none; }
     .link:hover { text-decoration:underline; }
-    .status { display:inline-flex; align-items:center; gap:8px; color:#176b3a; background:#eaf7ef; padding:6px 10px; border-radius:999px; font-size:.85rem; font-weight:650; }
+    form { display:grid; gap:12px; margin-top:14px; }\n    label { display:grid; gap:5px; color:var(--ink); font-size:.92rem; font-weight:600; }\n    input { width:100%; border:1px solid #c7d4e2; border-radius:8px; padding:11px 12px; font:inherit; }\n    input:focus { outline:3px solid #0078d433; border-color:var(--blue); }\n    .marks { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }\n    button { width:max-content; border:0; border-radius:8px; background:var(--blue); color:white; padding:11px 16px; font:inherit; font-weight:700; cursor:pointer; }\n    button:disabled { opacity:.65; cursor:wait; }\n    .output { min-height:1.5em; color:var(--ink); white-space:pre-wrap; overflow-wrap:anywhere; }\n    .status { display:inline-flex; align-items:center; gap:8px; color:#176b3a; background:#eaf7ef; padding:6px 10px; border-radius:999px; font-size:.85rem; font-weight:650; }
     .dot { width:8px; height:8px; background:#2e9d58; border-radius:50%; }
     footer { text-align:center; color:var(--muted); font-size:.88rem; padding:8px 18px 28px; }
   </style>
@@ -61,21 +61,32 @@ def home(req: func.HttpRequest) -> func.HttpResponse:
       <section class="card">
         <h2>Service status</h2>
         <p><span class="status"><span class="dot"></span>Function App is responding</span></p>
-        <p>Try the greeting endpoint or send marks to calculate a student result.</p>
+        <p>Use the forms below. They call this Function App’s HTTP API directly.</p>
       </section>
       <section class="card">
         <h2>GET greeting</h2>
-        <p>Optional query parameter: <code>name</code></p>
-        <pre>GET /api/hello?name=Atul</pre>
-        <a class="link" href="/api/hello?name=Atul">Try the endpoint →</a>
+        <p>Enter a name to trigger the GET function.</p>
+        <form id="hello-form">
+          <label>Your name<input name="name" autocomplete="name" maxlength="80" required placeholder="Atul"></label>
+          <button type="submit">Get greeting</button>
+        </form>
+        <p class="output" id="hello-output" role="status" aria-live="polite"></p>
+        <p><code>GET /api/hello?name=Atul</code></p>
       </section>
       <section class="card">
         <h2>POST a result</h2>
-        <p>Every mark must be an integer from 0 to 100. A pass requires at least 40 in each subject.</p>
-        <pre>POST /api/results
-Content-Type: application/json
-
-{"name":"Atul","marks":[80,70,90]}</pre>
+        <p>Enter a student and three marks (0–100). Pass requires at least 40 in every subject.</p>
+        <form id="results-form">
+          <label>Student name<input name="name" autocomplete="name" maxlength="80" required placeholder="Atul"></label>
+          <div class="marks">
+            <label>Subject 1<input name="mark1" type="number" min="0" max="100" step="1" required value="80"></label>
+            <label>Subject 2<input name="mark2" type="number" min="0" max="100" step="1" required value="70"></label>
+            <label>Subject 3<input name="mark3" type="number" min="0" max="100" step="1" required value="90"></label>
+          </div>
+          <button type="submit">Calculate result</button>
+        </form>
+        <p class="output" id="results-output" role="status" aria-live="polite"></p>
+        <p><code>POST /api/results</code></p>
       </section>
       <section class="card">
         <h2>Learn and explore</h2>
@@ -86,6 +97,58 @@ Content-Type: application/json
     </div>
   </main>
   <footer>Built with Azure Functions · Requests are calculated without storing student data.</footer>
+  <script>
+    const helloForm = document.querySelector("#hello-form");
+    const resultsForm = document.querySelector("#results-form");
+
+    helloForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = helloForm.querySelector("button");
+      const output = document.querySelector("#hello-output");
+      const name = new FormData(helloForm).get("name").trim();
+      button.disabled = true;
+      output.textContent = "Calling Azure Function…";
+      try {
+        const url = new URL("/api/hello", window.location.origin);
+        url.searchParams.set("name", name);
+        const response = await fetch(url);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+        output.textContent = data.message;
+      } catch (error) {
+        output.textContent = error.message || "Could not reach the greeting function.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    resultsForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = resultsForm.querySelector("button");
+      const output = document.querySelector("#results-output");
+      const form = new FormData(resultsForm);
+      const payload = {
+        name: form.get("name").trim(),
+        marks: [form.get("mark1"), form.get("mark2"), form.get("mark3")].map(Number)
+      };
+      button.disabled = true;
+      output.textContent = "Calculating with Azure Function…";
+      try {
+        const response = await fetch("/api/results", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+        output.textContent = `${data.name}: ${data.result} · ${data.percentage}% (${data.total}/${data.maximum})`;
+      } catch (error) {
+        output.textContent = error.message || "Could not reach the result function.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>""",
         status_code=200,
@@ -94,14 +157,14 @@ Content-Type: application/json
 
 
 @app.function_name(name="Hello")
-@app.route(route="api/hello", methods=["GET"])
+@app.route(route="api/hello", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def hello(req: func.HttpRequest) -> func.HttpResponse:
     name = req.params.get("name", "").strip() or "Azure Functions"
     return json_response({"message": f"Hello, {name}!"})
 
 
 @app.function_name(name="CalculateResult")
-@app.route(route="api/results", methods=["POST"])
+@app.route(route="api/results", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def calculate_result(req: func.HttpRequest) -> func.HttpResponse:
     try:
         data = req.get_json()
