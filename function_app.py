@@ -94,14 +94,14 @@ Content-Type: application/json
 
 
 @app.function_name(name="Hello")
-@app.route(route="hello", methods=["GET"])
+@app.route(route="api/hello", methods=["GET"])
 def hello(req: func.HttpRequest) -> func.HttpResponse:
     name = req.params.get("name", "").strip() or "Azure Functions"
     return json_response({"message": f"Hello, {name}!"})
 
 
 @app.function_name(name="CalculateResult")
-@app.route(route="results", methods=["POST"])
+@app.route(route="api/results", methods=["POST"])
 def calculate_result(req: func.HttpRequest) -> func.HttpResponse:
     try:
         data = req.get_json()
