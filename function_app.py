@@ -13,7 +13,7 @@ def json_response(data, status_code=200):
 
 
 @app.function_name(name="Home")
-@app.route(route="", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.route(route="/", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def home(req: func.HttpRequest) -> func.HttpResponse:
     """Serve a small public landing page at the Function App root."""
     return func.HttpResponse(
