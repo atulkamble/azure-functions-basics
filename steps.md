@@ -1,4 +1,7 @@
- git clone https://github.com/atulkamble/azure-functions-basics.git
+```
+// Azure Functions Project
+
+git clone https://github.com/atulkamble/azure-functions-basics.git
 
 // local run 
 
@@ -49,4 +52,4 @@ curl -i -X POST \
   --data '{"name":"Atul","marks":[80,70,90]}'
 
 unset RESULTS_KEY
-
+```
