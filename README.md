@@ -32,7 +32,7 @@ Build and deploy a **Student Result API** using **Python 3.11**, the **Python v2
 | GET `/api/hello?name=Atul` | `Hello` | Returns a JSON greeting. The name is optional. |
 | POST `/api/results` | `CalculateResult` | Validates a student name and marks, then returns total, maximum, percentage and pass/fail. |
 
-Each subject is out of 100. The student passes when **every subject scores at least 40**. Marks must be integers from 0 to 100. Percentage is the total divided by the number of subjects. The API calculates and returns each result without persisting it.
+Each subject is out of 100. The student passes when **every subject scores at least 40**. Marks must be integers from 0 to 100. Percentage is the total divided by the number of subjects. The API calculates and returns each result without persisting it. The browser UI submits a greeting form to `/api/hello` and a marks form to `/api/results`; both calls execute the Azure Functions directly.
 
 ```text
 azure-functions-basics/
@@ -151,7 +151,7 @@ Wait for deployment success and check that the output lists `Hello` and `Calcula
 
 ## 7. Test in Azure
 
-Core Tools normally bypasses HTTP trigger key checks on localhost. Azure enforces the app's `FUNCTION` authorization level. Use each function's own default key and send it in the `x-functions-key` header. Keep function keys out of Git, screenshots and logs.
+The homepage and its two demo API routes are configured for **anonymous access** so the browser forms can call them directly without exposing a function key. These endpoints are publicly callable. The result route validates input and does not persist student data. If you change the routes back to `FUNCTION` authorization, browser forms will need a secure server-side proxy; never embed a function key in HTML or JavaScript.
 
 ```bash
 APP_HOST="$(az functionapp show -g "$RG" -n "$APP" \
@@ -174,7 +174,21 @@ curl -i "https://$APP_HOST/api/results" \
 unset HELLO_KEY RESULTS_KEY
 ```
 
-Both requests should return HTTP 200. Repeat the Azure GET without the key to confirm that Azure rejects it with HTTP 401. In Azure Portal, open your Function App and its Application Insights resource to inspect requests and traces. The app logs the number of subjects in each successful calculation.
+Both requests should return HTTP 200. With the current anonymous route configuration, a browser or curl call works without a key. If you later restore `FUNCTION` authorization, use the function-key approach below and expect a keyless request to return HTTP 401. In Azure Portal, open your Function App and its Application Insights resource to inspect requests and traces. The app logs the number of subjects in each successful calculation.
+
+### Test Azure APIs with curl
+
+The current demo endpoints allow anonymous requests:
+
+```bash
+curl -i 'https://$APP_HOST/api/hello?name=Atul'
+
+curl -i -X POST "https://$APP_HOST/api/results" \\
+  -H 'Content-Type: application/json' \\
+  --data '{"name":"Atul","marks":[80,70,90]}'
+```
+
+The homepage forms use these same APIs. The greeting form makes a GET request; the result form sends JSON with POST. Do not add function keys to the browser code.
 
 ## 8. Troubleshooting
 
